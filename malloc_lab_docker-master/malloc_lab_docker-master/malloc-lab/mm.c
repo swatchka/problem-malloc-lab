@@ -24,15 +24,15 @@
  ********************************************************/
 team_t team = {
     /* Team name */
-    "ateam",
+    "1team",
     /* First member's full name */
-    "Harry Bovik",
+    "YangYoonsung",
     /* First member's email address */
-    "bovik@cs.cmu.edu",
+    "yoonsung2007@gmail.com",
     /* Second member's full name (leave blank if none) */
-    "",
+    "KimTaehwan",
     /* Second member's email address (leave blank if none) */
-    ""};
+    "qrxoghks1209@gmail.com"};
 
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
