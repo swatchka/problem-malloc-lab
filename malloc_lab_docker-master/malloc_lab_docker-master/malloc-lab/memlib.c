@@ -48,23 +48,27 @@ void mem_deinit(void)
 void mem_reset_brk()
 {
     mem_brk = mem_start_brk;
-}
+} // 초기화
 
 /* 
  * mem_sbrk - simple model of the sbrk function. Extends the heap 
  *    by incr bytes and returns the start address of the new area. In
  *    this model, the heap cannot be shrunk.
  */
-void *mem_sbrk(int incr) 
+void *mem_sbrk(int incr) // 힙 확장하는 함수
 {
-    char *old_brk = mem_brk;
+    char *old_brk = mem_brk; // 현재 힙의 끝을 가리키는 전역 포인터
 
-    if ( (incr < 0) || ((mem_brk + incr) > mem_max_addr)) {
-	errno = ENOMEM;
-	fprintf(stderr, "ERROR: mem_sbrk failed. Ran out of memory...\n");
-	return (void *)-1;
+    if ( (incr  < 0) || ((mem_brk + incr) > mem_max_addr)) {
+	    errno = ENOMEM;
+	    fprintf(stderr, "ERROR: mem_sbrk failed. Ran out of memory...\n");
+	    return (void *)-1; 
     }
-    mem_brk += incr;
+    // 위 if문 설명
+    // 만약 요청한 확장 크기가 음수거나 또는 
+    // 새로 확보된 공간의 시작 주소가 배열의 끝을 넘어서면
+    // -1 에러 출력
+    mem_brk += incr; // 새로 확보된 공간의 시작 주소
     return (void *)old_brk;
 }
 
