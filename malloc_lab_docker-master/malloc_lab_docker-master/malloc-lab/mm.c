@@ -32,7 +32,8 @@ team_t team = {
     /* Second member's full name (leave blank if none) */
     "KimTaehwan",
     /* Second member's email address (leave blank if none) */
-    "qrxoghks1209@gmail.com"};
+    "qrxoghks1209@gmail.com"
+};
 
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
@@ -40,13 +41,21 @@ team_t team = {
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT - 1)) & ~0x7)
 
-#define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
+#define SIZE_T_SIZE (ALIGN(sizeof(size_t))) // 사용자 요청 크기 정의
+#define WSIZE 4 // 워드사이즈 4바이트로 정의
+#define DSIZE 8 // 더블워드사이즈 8바이트로 정의
+#define CHUNKSIZE (1<<12) // 힙을 확장하는 기본 단위
 
+#define MAX(x, y) ((x) > (y)? (x) : (y)) // x와 y중 더 큰 값을 반환
 /*
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
 {
+    // 힙을 넓혀주는 친구
+    // 힙의 최소한의 논리적 구조를 만들어 주는 역할
+    // 첫번째 free block도 만들어 둘것
+    mem_sbrk(4 * WSIZE);
     return 0;
 }
 
