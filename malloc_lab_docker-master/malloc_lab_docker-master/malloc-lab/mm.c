@@ -52,8 +52,8 @@ team_t team = {
 #define PACK(size, alloc) ((size) | (alloc)) // header/footer 값 구성
 /* 크기 + 할당여부 결합*/
 
-#define GET(p) (*(unsigned int *)(p)) // 메모리 접근 
-#define PUT(p, val) (*(unsigned int *)(p) = (val)) // 메모리 접근
+#define GET(p) (*(size_t *)(p)) // 메모리 접근 
+#define PUT(p, val) (*(size_t *)(p) = (val)) // 메모리 접근
 /* header/footer 값 읽고 쓰기*/
 
 #define GET_SIZE(p) (GET(p) & ~0x7) // header/footer에서 크기 추출
@@ -69,44 +69,47 @@ team_t team = {
 /*
  * mm_init - initialize the malloc package.
  */
-static char *heap_listp;
+static char *heap_listp = 0;
+static void *coalesce(void *bp)
+{
+    return bp;
+}
 static void *extend_heap(size_t words)
 {
-    // char *bp;
-    // size_t size;
+    char *bp;
+    size_t size;
 
-    // size = (words % 2) ? (words+1) * WSIZE : words * WSIZE;
-    // if ((long)(bp = mem_sbrk(size)) == -1) {
-    //     return NULL;
-    // }
+    size = (words % 2) ? (words + 1) * WSIZE : words * WSIZE;
 
-    // PUT(HDRP(bp), PACK(size, 0));           
-    // PUT(FTRP(bp), PACK(size, 0));
-    // PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));
+    if ((long)(bp = mem_sbrk(size)) == -1)
+        return NULL;
 
-    // return coalesce(bp);
-    return NULL;
+    PUT(HDRP(bp), PACK(size, 0));
+    PUT(FTRP(bp), PACK(size, 0));
+    PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));
+
+    return coalesce(bp);
 }
 
 
 int mm_init(void)
 {
-    // 힙을 넓혀주는 친구
-    // 힙의 최소한의 논리적 구조를 만들어 주는 역할
-    // 첫번째 free block도 만들어 둘것
-    heap_listp = mem_sbrk(4 * WSIZE);
-    if (heap_listp == (void *) -1) {
+    /* 최소 힙 공간 확보 */
+    if ((heap_listp = mem_sbrk(4 * WSIZE)) == (void *)-1)
         return -1;
-    }
-    PUT(heap_listp, 0);                             // 패딩
-    PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1));    // 프롤로그 헤더
-    PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1));    // 프롤로그 푸터
-    PUT(heap_listp + (3*WSIZE), PACK(0, 1));        // 에필로그 헤더
-    heap_listp += (2*WSIZE);                        // 포인터 조정  
 
+    /* paddinf + prologue header/footer + epilogue header 초기화 */
+    PUT(heap_listp, 0);                               // 패딩
+    PUT(heap_listp + (1 * WSIZE), PACK(DSIZE, 1));    // 프롤로그 헤더
+    PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1));    // 프롤로그 푸터
+    PUT(heap_listp + (3 * WSIZE), PACK(0, 1));        // 에필로그 헤더
+    heap_listp += (2 * WSIZE);                        // payload 부분을 가리킴 
+
+    /* 첫 번째 free block 생성 */
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL) {
         return -1;
     }
+
     return 0;
 }
 
@@ -132,6 +135,13 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *ptr)
 {
+    size_t size = GET_SIZE(HDRP(ptr));
+    /* 전체블록 크기 size에 저장 (header + payload + footer)*/
+
+    PUT(HDRP(ptr), PACK(size, 0)); // 헤더에 블록 전체 사이즈와 alloc=0으로
+    PUT(FTRP(ptr), PACK(size, 0)); // 푸터에 블록 전체 사이즈와 alloc=0으로
+
+    coalesce(ptr);
 }
 
 /*
