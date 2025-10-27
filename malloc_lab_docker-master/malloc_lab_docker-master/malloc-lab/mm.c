@@ -72,6 +72,10 @@ team_t team = {
 static char *heap_listp = 0;
 static void *coalesce(void *bp)
 {
+    // 1. 오른쪽이 프리인경우
+    // 2. 왼쪽이 프리인경우
+    // 3. 양쪽이 프리인경우
+    // 3. 양쪽 다 alloc=1인 경우 (return bp;)
     return bp;
 }
 static void *extend_heap(size_t words)
