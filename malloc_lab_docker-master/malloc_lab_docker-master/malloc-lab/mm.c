@@ -60,7 +60,7 @@ team_t team = {
 #define GET_ALLOC(p) (GET(p) & 0x1) // header/footer에서 할당 상태 추출
 
 #define HDRP(bp) ((char *)(bp) - WSIZE) 
-// bp = 0x1008 → HDRP(bp) = 0x1008 - 4 = 0x1004
+// bp = 0x1008 → HDRP(bp) = 0x1008 - 4 = 0x1004 (블록 크기 추출)
 #define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
 /* payload -> header/footer 주소 계산 */
 
@@ -98,7 +98,7 @@ static void *coalesce(void *bp)
     }
 
     else if (!prev_alloc && !next_alloc) {
-        size += GET_SIZE(HDRP(PREV_BLKP(bp)));
+        size += GET_SIZE(HDRP(PREV_BLKP(bp)));  
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
@@ -111,18 +111,37 @@ static void *extend_heap(size_t words)
     char *bp;
     size_t size;
 
+    // words가 짝수면 words * WSIZE, 홀수면 (word + 1) * WSIZE
     size = (words % 2) ? (words + 1) * WSIZE : words * WSIZE;
 
+    // mem_sbrk(size) 를 호출하여 힙을 확장한다.
     if ((long)(bp = mem_sbrk(size)) == -1)
-        return NULL;
+        return NULL; // 확장 실패시 NULL 반환
 
+    // 확장된 블록의 헤더에 크기와 할당 상태(0) 기록
     PUT(HDRP(bp), PACK(size, 0));
+
+    // 확장된 블록의 푸터에 크기와 할당 상태(0) 기록
     PUT(FTRP(bp), PACK(size, 0));
+
+    // 확장된 블록 다음에 오는 블록의 헤더를 설정하여 해당 블록이 할당되지 않은 자유블록임을 나타낸다.
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));
 
+    // 확장된 블록을 병합하여 인접한 자유 블록들이 병합되도록 한다.
     return coalesce(bp);
 }
 
+static void *find_fit(size_t asize)
+{
+    void *cur;
+    for (cur = heap_listp; GET_SIZE(HDRP(cur)) > 0; cur = NEXT_BLKP(cur)) {
+        size_t block_size = GET(HDRP(cur));
+        if (!GET_ALLOC(HDRP(cur)) && block_size >= asize) {
+            return cur; // 조건에 맞는 블록 반환
+        }
+    }
+    return NULL;
+}
 
 int mm_init(void)
 {
@@ -151,8 +170,8 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-    int newsize = ALIGN(size + SIZE_T_SIZE);
-    void *p = mem_sbrk(newsize);
+    int newsize = ALIGN(size + SIZE_T_SIZE); // 요청된 크기 정렬
+    void *p = mem_sbrk(newsize);             // 요청된 크기만큼 힙 확장
     if (p == (void *)-1)
         return NULL;
     else
