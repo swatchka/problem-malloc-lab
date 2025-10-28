@@ -76,6 +76,34 @@ static void *coalesce(void *bp)
     // 2. 왼쪽이 프리인경우
     // 3. 양쪽이 프리인경우
     // 3. 양쪽 다 alloc=1인 경우 (return bp;)
+    size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); // 이전 블록의 푸터를 보고 알록상태 추출
+    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); // 다음 블록의 헤더를 보고 알록상태 추출
+    size_t size = GET_SIZE(HDRP(bp)); // 헤더에서 블록 크기 추출
+
+    if (prev_alloc && next_alloc) {
+        return bp;
+    }
+    
+    else if (prev_alloc && !next_alloc) {
+        size += GET_SIZE(HDRP(NEXT_BLKP(bp)));  // 다음 블록과 결합 (+사이즈)
+        PUT(HDRP(bp), PACK(size, 0));           // 헤더에 사이즈와 alloc 갱신
+        PUT(FTRP(bp), PACK(size, 0));           // 푸터에 사이즈와 alloc 갱신
+    }
+
+    else if (!prev_alloc && next_alloc) {
+        size += GET_SIZE(HDRP(PREV_BLKP(bp)));  // 이전 블록과 결합 (+사이즈)
+        PUT(HDRP(bp), PACK(size, 0));           // 헤더에 사이즈와 alloc 갱신
+        PUT(FTRP(bp), PACK(size, 0));           // 푸터에 사이즈와 alloc 갱신
+        bp = PREV_BLKP(bp);                     // 현재 블록 갱신
+    }
+
+    else if (!prev_alloc && !next_alloc) {
+        size += GET_SIZE(HDRP(PREV_BLKP(bp)));
+        size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
+        PUT(HDRP(bp), PACK(size, 0));
+        PUT(FTRP(bp), PACK(size, 0));
+        bp = PREV_BLKP(bp);
+    }
     return bp;
 }
 static void *extend_heap(size_t words)
