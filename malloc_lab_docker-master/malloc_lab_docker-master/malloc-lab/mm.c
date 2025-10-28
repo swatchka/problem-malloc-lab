@@ -132,7 +132,9 @@ static void *extend_heap(size_t words)
 }
 
 static void *find_fit(size_t asize)
-{
+{   
+    // 힙 시작부터 끝까지 탐색
+    // 만약 탐색중 크기가 요구한거보다 크거나 같고 alloc=0인 블록 리턴
     void *cur;
     for (cur = heap_listp; GET_SIZE(HDRP(cur)) > 0; cur = NEXT_BLKP(cur)) {
         size_t block_size = GET(HDRP(cur));
@@ -179,6 +181,9 @@ void *mm_malloc(size_t size)
         *(size_t *)p = size;
         return (void *)((char *)p + SIZE_T_SIZE);
     }
+    // 적합한 블록을 찾아 할당
+    // 적합한 블록이 없다면 힙 확장
+    // 블록을 분할하거나 할당
 }
 
 /*
