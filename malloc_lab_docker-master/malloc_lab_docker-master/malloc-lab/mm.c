@@ -79,7 +79,7 @@ static void *coalesce(void *bp)
     if (bp == NULL) {
         return NULL;
     }
-    size_t prev_alloc = GET_ALLOC(HDRP(PREV_BLKP(bp))); // 이전 블록의 푸터를 보고 알록상태 추출
+    size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); // 이전 블록의 푸터를 보고 알록상태 추출
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); // 다음 블록의 헤더를 보고 알록상태 추출
     size_t size = GET_SIZE(HDRP(bp)); // 헤더에서 블록 크기 추출
 
@@ -167,7 +167,8 @@ static void place(void *bp, size_t asize)
 int mm_init(void)
 {
     /* 최소 힙 공간 확보 */
-    if ((heap_listp = mem_sbrk(4 * WSIZE)) == (void *)-1)
+    heap_listp = mem_sbrk(4 * WSIZE);
+    if (heap_listp == (void *)-1)
         return -1;
 
     /* paddinf + prologue header/footer + epilogue header 초기화 */
@@ -251,7 +252,6 @@ void *mm_realloc(void *ptr, size_t size)
         mm_free(ptr);
         return NULL;
     }
-
     
     void *newptr = mm_malloc(size);
     if (newptr == NULL) {
